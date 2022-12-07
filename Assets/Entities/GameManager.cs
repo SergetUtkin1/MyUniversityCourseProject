@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -11,6 +13,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Player[] _players;
     [SerializeField] private Board board;
     private List<Card> cards;
+    private Combination BestCombinationAtGame; 
     
     void Start()
     {
@@ -81,15 +84,36 @@ public class GameManager : MonoBehaviour
 
     public void ShowDown()
     {
-        foreach(var player in _players)
+        BestCombinationAtGame = CombinationMaster.FindBestCombination((new List<Card>(_players.First().atributes.Hand)).Concat(board.boadCards).ToList());
+        foreach (var player in _players)
         {
             ShowCards(player);
             player.combination = CombinationMaster.FindBestCombination((new List<Card>(player.atributes.Hand)).Concat(board.boadCards).ToList());
-            Debug.Log($"player with: {player.combination.Name}");
+            if (player.combination.Rank < BestCombinationAtGame.Rank)
+                BestCombinationAtGame = player.combination;
+
+
+            Debug.Log($"player with: {player.combination.Name + player.combination.Rank}");
         }
         
     }
 
+    public List<Player> DefineWinners()
+    {
+        var winners = CombinationMaster.FindWinners(_players.ToList().FindAll(p => p.combination.Rank == BestCombinationAtGame.Rank), board.boadCards);
+        
+        foreach(var player in winners)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                player.atributes.handObject[i].GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f);
+            }
+        }
+        return winners;
+    }
+
+    public void RestartGame()
+        => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 
     void Update()
     {
@@ -111,6 +135,16 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.O))
         {
             ShowDown();
+        }
+
+        if (Input.GetKeyDown(KeyCode.W))
+        {
+            DefineWinners();
+        }
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            DefineWinners();
         }
     }
 }

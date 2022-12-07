@@ -21,17 +21,167 @@ public class CombinationMaster
         "A"
     };
     private static readonly string[] Names = { 
-        "Flush Royal",
+        "Flush Royal",//
         "Flush Straight",
-        "Four Of Kind", 
-        "Full House",
-        "Flush",
-        "Straight",
-        "Three Of Kind",
-        "Two Pair",
-        "Pair",
+        "Four Of Kind", // h
+        "Full House",// h of 3 /q
+        "Flush",//last/q
+        "Straight",// last/q
+        "Three Of Kind", // h/q
+        "Two Pair",// h/q
+        "Pair",// h/q
         "HighCard" 
     };
+
+    public static List<Player> FindWinners(List<Player> players, List<Card> boardCards)
+    {
+        if(players.Count > 1)
+        {
+            var winners = new List<Player>();
+            switch (players.First().combination.Name)
+            {
+                case "Full House":
+                    winners = FindWinnersFullHouse(players);
+                    break;
+
+                case "Pair":
+                    winners = FindWinnersPair(players);
+                    break;
+
+                default:
+                    winners = FindWinnersByHighCard(players);
+
+                    if (winners.Count > 1)
+                    {
+                        winners = FindWinnersByKicker(players, boardCards);
+                    }
+                    break;
+            }
+
+            return winners;
+        }
+        else
+        {
+            return players;
+        }    
+    }
+
+    // TO UTILS
+    public static List<Card> ConCatBoardHand(List<Card> boardCards, Player player)
+        => (new List<Card>(boardCards).Concat(player.atributes.Hand)).ToList();
+
+    public static List<Player> FindWinnersByKicker(List<Player> players, List<Card> boardCards)
+    {
+        var highCard = FindHighCard(ConCatBoardHand(boardCards, players.First())
+            .FindAll(x => !players.First().combination.cards
+            .Any(c => c==x)));
+        var winners = new List<Player>() { players.First() };
+        for (int i = 1; i < players.Count; i++)
+        {
+            var hcChallenger = FindHighCard(ConCatBoardHand(boardCards, players.First())
+                .FindAll(x => !players[i].combination.cards
+                .Any(c => c == x)));
+            if (hcChallenger.First() == highCard.First())
+            {
+                winners.Add(players[i]);
+            }
+            else if (hcChallenger.First() > highCard.First())
+            {
+                highCard = hcChallenger;
+                winners.Clear();
+                winners.Add(players[i]);
+            }
+        }
+        return winners;
+    }
+
+    public static List<Player> FindWinnersByHighCard(List<Player> players)
+    {
+        var highCard = FindHighCard(players.First().combination.cards);
+        var winners = new List<Player>() { players.First() };
+        for (int i = 1; i < players.Count; i++)
+        {
+            var hcChallenger = FindHighCard(players[i].combination.cards);
+            if (hcChallenger.First() == highCard.First())
+            {
+                winners.Add(players[i]);
+            }
+            else if (hcChallenger.First() > highCard.First())
+            {
+                highCard = hcChallenger;
+                winners.Clear();
+                winners.Add(players[i]);
+            }
+        }
+        return winners;
+    }
+
+    public static List<Player> FindWinnersFullHouse(List<Player> players)
+    {
+        var highCard = FindHighCard(FindThreeOfKind(players.First().combination.cards));
+        var winners = new List<Player>() { players.First() };
+        for (int i = 1; i < players.Count; i++)
+        {
+            var hcChallenger = FindHighCard(FindThreeOfKind(players[i].combination.cards));
+            if (hcChallenger.First() == highCard.First())
+            {
+                hcChallenger = FindPair(players[i].combination.cards);
+                highCard = FindPair(winners.First().combination.cards);
+                if (highCard.First()  == hcChallenger.First())
+                {
+                    winners.Add(players[i]);
+                    highCard = FindHighCard(FindThreeOfKind(winners.First().combination.cards));
+                }
+                else if(hcChallenger.First() > highCard.First())
+                {
+                    highCard = FindHighCard(FindThreeOfKind(players[i].combination.cards));
+                    winners.Clear();
+                    winners.Add(players[i]);
+                }
+            }
+            else if (hcChallenger.First() > highCard.First())
+            {
+                highCard = hcChallenger;
+                winners.Clear();
+                winners.Add(players[i]);
+            }
+        }
+        return winners;
+    }
+
+    public static List<Player> FindWinnersPair(List<Player> players)
+    {
+        var highCard = FindHighCard(FindPair(players.First().combination.cards));
+        var winners = new List<Player>() { players.First() };
+        for (int i = 1; i < players.Count; i++)
+        {
+            var hcChallenger = FindHighCard(FindPair(players[i].combination.cards));
+            if (hcChallenger.First() == highCard.First())
+            {
+                hcChallenger = FindPair(players[i].combination.cards.FindAll(x => highCard.Contains(x)));
+                highCard = FindPair(winners.First().combination.cards.FindAll(x => hcChallenger.Contains(x)));
+                if (highCard.First() == hcChallenger.First())
+                {
+                    winners.Add(players[i]);
+                    highCard = FindHighCard(FindPair(winners.First().combination.cards));
+                }
+                else if (hcChallenger.First() > highCard.First())
+                {
+                    highCard = FindHighCard(FindPair(players[i].combination.cards));
+                    winners.Clear();
+                    winners.Add(players[i]);
+                }
+            }
+            else if (hcChallenger.First() > highCard.First())
+            {
+                highCard = hcChallenger;
+                winners.Clear();
+                winners.Add(players[i]);
+            }
+        }
+        return winners;
+    }
+
 
     public static Combination FindBestCombination(List<Card> cards)
     {
