@@ -4,12 +4,12 @@ using UnityEngine;
 
 public class BlindMaster : MonoBehaviour
 {
-    [SerializeField]
-    private static readonly Sprite[] BlindFaces;
+    [SerializeField] private Sprite[] BlindFaces;
     private readonly string[] BlindNames = {
-        "Dealer",
-        "Small Blind",
-        "Big Blind"
+        
+            "Big Blind",
+            "Small Blind",
+            "Dealer"
     };
 
     public List<Blind> GenerateBlinds()

@@ -2,17 +2,38 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Bank : MonoBehaviour
+public class Bank
 {
-    public int Sum { get; set; }
-    public void AcceptBet(int bet)
+    public int Pot { get; set; }
+    public int BigBlind { get; set; }
+    public int SmallBlind { get; set; }
+
+    public void RequestBet(Player player)
     {
-        Sum += bet;
+        if(player.IsBot)
+        {
+            AcceptBet(40, player);
+        }
+        else
+        {
+            WaitingForBet(player);
+        }
+    }
+
+    public void AcceptBet(int bet, Player player)
+    {
+        Pot += bet;
+        player.Bet = bet;
+    }
+
+    public void WaitingForBet(Player player)
+    {
+
     }
 
     public void RecieveBankToWiners(List<Player> winners)
     {
-        int prize = Sum / winners.Count;
+        int prize = Pot / winners.Count;
         foreach (var player in winners)
         {
             player.Balance += prize;
@@ -21,6 +42,6 @@ public class Bank : MonoBehaviour
 
     public void NullifyCurrentBank()
     {
-        Sum = 0;
+        Pot = 0;
     }
 }

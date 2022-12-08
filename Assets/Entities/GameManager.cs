@@ -10,13 +10,15 @@ public class GameManager : MonoBehaviour
 {
     [SerializeField] private GameObject CardPrefab;
     [SerializeField] Deck deck;
+    private Bank _bank;
     [SerializeField] private Player[] _players;
     [SerializeField] private Board board;
     private List<Card> cards;
-    private Combination BestCombinationAtGame; 
+    private Combination Nuts; 
     
     void Start()
     {
+        _bank = new Bank();
         cards = deck.GenerateNewDeck();
         deck.Shuffle(cards);
         PlayPreFlop();
@@ -34,19 +36,24 @@ public class GameManager : MonoBehaviour
     {
         for (int i = 0; i < 2; i++)
         {
-            GameObject newCard = Instantiate(CardPrefab, player.atributes.HandPosition[i].transform.position, player.atributes.HandPosition[i].transform.rotation);
+            GameObject newCard = Instantiate(CardPrefab,
+                player.atributes.HandPosition[i].transform.position, 
+                player.atributes.HandPosition[i].transform.rotation);
             player.atributes.handObject.Add(newCard);
 
             player.atributes.handObject[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
         }
     }
 
+
     public void PlayPreFlop()
     {
         for (int i = 0; i < 5; i++)
         {
             board.AddCardToBoard(cards[0]);
-            GameObject newCard = Instantiate(CardPrefab, board.cardPlaces[i].transform.position, board.cardPlaces[i].transform.rotation);
+            GameObject newCard = Instantiate(CardPrefab, 
+                board.cardPlaces[i].transform.position,
+                board.cardPlaces[i].transform.rotation);
             board.objectsOnBoard.Add(newCard);
 
             newCard.GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
@@ -60,6 +67,10 @@ public class GameManager : MonoBehaviour
             HideCards(player);
             if (!player.IsBot)
             ShowCards(player);  
+        }
+        foreach(var player in _players)
+        {
+            _bank.RequestBet(player);
         }
     }
 
@@ -84,13 +95,13 @@ public class GameManager : MonoBehaviour
 
     public void ShowDown()
     {
-        BestCombinationAtGame = CombinationMaster.FindBestCombination((new List<Card>(_players.First().atributes.Hand)).Concat(board.boadCards).ToList());
+        Nuts = CombinationMaster.FindBestCombination((new List<Card>(_players.First().atributes.Hand)).Concat(board.boadCards).ToList());
         foreach (var player in _players)
         {
             ShowCards(player);
             player.combination = CombinationMaster.FindBestCombination((new List<Card>(player.atributes.Hand)).Concat(board.boadCards).ToList());
-            if (player.combination.Rank < BestCombinationAtGame.Rank)
-                BestCombinationAtGame = player.combination;
+            if (player.combination.Rank < Nuts.Rank)
+                Nuts = player.combination;
 
 
             Debug.Log($"player with: {player.combination.Name + player.combination.Rank}");
@@ -100,7 +111,7 @@ public class GameManager : MonoBehaviour
 
     public List<Player> DefineWinners()
     {
-        var winners = CombinationMaster.FindWinners(_players.ToList().FindAll(p => p.combination.Rank == BestCombinationAtGame.Rank), board.boadCards);
+        var winners = CombinationMaster.FindWinners(_players.ToList().FindAll(p => p.combination.Rank == Nuts.Rank), board.boadCards);
         
         foreach(var player in winners)
         {
@@ -142,9 +153,9 @@ public class GameManager : MonoBehaviour
             DefineWinners();
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.P))
         {
-            DefineWinners();
+            RestartGame();
         }
     }
 }
