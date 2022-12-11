@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.UI;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -14,11 +16,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Player[] _players;
     [SerializeField] private Board board;
     private List<Card> cards;
-    private Combination Nuts; 
-    
+    private Combination Nuts;
+
+    [SerializeField] private Text _PotText;
+
+    public Bank Bank { get; private set; } = new Bank();
+
     void Start()
     {
-        _bank = new Bank();
         cards = deck.GenerateNewDeck();
         deck.Shuffle(cards);
         PlayPreFlop();
@@ -68,10 +73,8 @@ public class GameManager : MonoBehaviour
             if (!player.IsBot)
             ShowCards(player);  
         }
-        foreach(var player in _players)
-        {
-            _bank.RequestBet(player);
-        }
+
+        _ = Bank.RequestBet(_players);
     }
 
     public void PlayFlop()
@@ -128,7 +131,9 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.F))
+        _PotText.text = $"Pot: {Bank.Pot}";
+
+        if (Input.GetKeyDown(KeyCode.F))
         {
             PlayFlop();
         }
