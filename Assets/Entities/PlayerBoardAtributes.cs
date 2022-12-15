@@ -9,7 +9,8 @@ public class PlayerBoardAtributes
     [SerializeField] public GameObject BlindPosition;
     [SerializeField] public GameObject[] HandPosition;
     public List<Card> _hand;
-    public List<GameObject> handObject;
+    public List<GameObject> cardGameObjects;
+    public GameObject blindGameObject;
 
 
     public Blind Blind { get; set; } 

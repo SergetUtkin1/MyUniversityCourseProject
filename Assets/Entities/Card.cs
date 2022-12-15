@@ -8,6 +8,7 @@ public class Card : MonoBehaviour, IComparable<Card>
     public string Value { get; set; }
     public string Suit { get; set; }
     public Figure CardFigure { get; set; }
+    public int Rank { get { return Deck.GetIndexOfCard(this.Value); } }
 
     public static Card CreateCard(GameObject where, string value, string suit, Figure cardFigure)
     {

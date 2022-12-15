@@ -9,11 +9,19 @@ public class Player : MonoBehaviour
 {
     [SerializeField] private GameManager gameManager;
 
-    [SerializeField] private Button CallButton;
-    [SerializeField] private Button FoldButton;
-    [SerializeField] private Button BetButton;
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+    [SerializeField] private Button? CallButton;
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+    [SerializeField] private Button? FoldButton;
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+    [SerializeField] private Button? BetButton;
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 
-    [SerializeField] private InputField BetInputField;
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+    [SerializeField] private InputField? BetInputField;
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 
     [SerializeField] private Text _betText;
     [SerializeField] private Text _balanceText;
@@ -145,6 +153,12 @@ public class Player : MonoBehaviour
         {
            Debug.Log($"Bet is {newBet}");
            BetValue = newBet;
+        }
+        else if(String.IsNullOrWhiteSpace(BetInputField.text))
+        {
+            newBet = 0;
+            Debug.Log($"Bet is {newBet}");
+            BetValue = newBet;
         }
         else
         {

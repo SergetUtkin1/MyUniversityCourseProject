@@ -44,18 +44,18 @@ public class CombinationMaster
                     winners = FindWinnersFullHouse(players);
                     break;
 
-                case "Pair":
-                    winners = FindWinnersPair(players);
+                case "Two Pair":
+                    winners = FindWinnersTwoPair(players);
                     break;
 
                 default:
                     winners = FindWinnersByHighCard(players);
-
-                    if (winners.Count > 1)
-                    {
-                        winners = FindWinnersByKicker(players, boardCards);
-                    }
                     break;
+            }
+
+            if (winners.Count > 1)
+            {
+                winners = FindWinnersByKicker(players, boardCards);
             }
 
             return winners;
@@ -149,7 +149,7 @@ public class CombinationMaster
         return winners;
     }
 
-    public static List<Player> FindWinnersPair(List<Player> players)
+    public static List<Player> FindWinnersTwoPair(List<Player> players)
     {
         var highCard = FindHighCard(FindPair(players.First().combination.cards));
         var winners = new List<Player>() { players.First() };
@@ -230,7 +230,7 @@ public class CombinationMaster
     public static List<Card> FindPair(List<Card> cards)
     {
         var combinations = new List<Card>();
-        cards.OrderBy(x => x.Value);
+        cards = cards.OrderBy(x => x.Rank).ToList();
         combinations.AddRange(cards.FindAll(c => cards.Count(x => x == c) == 2));
 
         return combinations;
@@ -240,7 +240,7 @@ public class CombinationMaster
     {
         var combinations = new List<Card>();
         var cardsCopy = new List<Card>(cards);
-        cardsCopy.OrderBy(x => x.Value);
+        cards = cards.OrderBy(x => x.Rank).ToList();
         for (int i = 0; i < 2; i++)
         {
             var pair = FindPair(cardsCopy);
@@ -254,7 +254,7 @@ public class CombinationMaster
     public static List<Card> FindThreeOfKind(List<Card> cards)
     {
         var combinations = new List<Card>();
-        cards.OrderBy(x => x.Value);
+        cards = cards.OrderBy(x => x.Rank).ToList();
 
         combinations.AddRange(cards.FindAll(c => cards.Count(x => x == c) == 3));
 
@@ -265,7 +265,7 @@ public class CombinationMaster
     {
         var combinations = new List<Card>();
         combinations.Add(cards[0]);
-        cards.OrderBy(x => x.Value);
+        cards = cards.OrderBy(x => x.Rank).ToList();
         for (int i = 1; i < cards.Count; i++)
         {
             switch (cards[i - 1] - cards[i])
@@ -305,7 +305,7 @@ public class CombinationMaster
     public static List<Card> FindFlush(List<Card> cards)
     {
         var combinations = new List<Card>();
-        cards.OrderBy(x => x.Value);
+        cards = cards.OrderBy(x => x.Rank).ToList();
         for (int i = cards.Count - 1; i >= 0; i--)
         {
             combinations = cards.FindAll(c => c.Suit == cards[i].Suit);
@@ -326,7 +326,7 @@ public class CombinationMaster
     {
         var combinations = new List<Card>();
         var cardCopy = new List<Card>(cards);
-        cardCopy.OrderBy(x => x.Value);
+        cards = cards.OrderBy(x => x.Rank).ToList();
         var threeCards = FindThreeOfKind(cardCopy);
         combinations.AddRange(threeCards);
         cardCopy.RemoveAll(x => threeCards.Contains(x));

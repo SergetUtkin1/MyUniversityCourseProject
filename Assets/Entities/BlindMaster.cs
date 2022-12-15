@@ -12,10 +12,12 @@ public class BlindMaster : MonoBehaviour
             "Dealer"
     };
 
-    public List<Blind> GenerateBlinds()
-    {
-        var blinds = new List<Blind>();
+    public Blind BigBlind { get; set; }
+    public Blind SmallBlind { get; set; }
+    public Blind DealerBlind { get; set; }
 
+    public void GenerateBlinds()
+    {
         for (int i = 0; i < BlindNames.Length; i++)
         {
             var figure = new Figure()
@@ -23,8 +25,21 @@ public class BlindMaster : MonoBehaviour
                 Face = BlindFaces[i],
             };
             var blind = Blind.CreateBlind(gameObject, BlindNames[i], figure);
-        }
 
-        return blinds;
+            switch (i)
+            {
+                case 0:
+                    BigBlind = blind;
+                    break;
+                case 1:
+                    SmallBlind = blind;
+                    break;
+                case 2:
+                    DealerBlind = blind;
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }

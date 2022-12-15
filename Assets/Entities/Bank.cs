@@ -22,14 +22,14 @@ public class Bank
 
     public async Task RequestBet(Player[] players)
     {
-        var ListOfPlayers = players.ToList();
+        var ListOfPlayers = players.ToList().FindAll(p => p.IsActive == true);
 
         var respsonses = 0;
         var CBIsChanched = false;
         var additionalAmount = 0;
-        while(respsonses < ListOfPlayers.Count(p => p.IsActive == true) + additionalAmount)
+        while(respsonses < ListOfPlayers.Count + additionalAmount)
         {
-            var index = respsonses % ListOfPlayers.Count(p => p.IsActive == true);
+            var index = respsonses % ListOfPlayers.Count;
 
             if (ListOfPlayers[index].IsBot)
             {
@@ -42,6 +42,7 @@ public class Bank
                 else if (bet < CurrentBet)
                 {
                     ListOfPlayers[index].IsActive = false;
+                    ListOfPlayers.RemoveAt(index);
                 }
             }
             else
@@ -56,12 +57,21 @@ public class Bank
                 {
                     ListOfPlayers[index].Fold();
                     ListOfPlayers[index].IsActive = false;
+                    ListOfPlayers.RemoveAt(index);
                 }
             }
 
             if(CBIsChanched)
             {
-                additionalAmount = index;
+                if(index == 0)
+                {
+                    respsonses = 0;
+                }
+                else
+                {
+                    additionalAmount = index;
+                }
+
                 CBIsChanched = false;
             }
 
@@ -70,13 +80,13 @@ public class Bank
     }
 
     private int BetForBot()
-        => CurrentBet < 40 ? 40 : CurrentBet;
+        => CurrentBet > 40 ? CurrentBet : 40;
 
-    public int AcceptBet(int bet, Player player)
+    public int AcceptBet(int newbet, Player player)
     {
-        Pot += bet;
-        player.BetValue = bet;
-        return bet;
+        Pot += newbet;
+        player.BetValue = newbet;
+        return newbet;
     }
 
     public async Task<int> WaitingForBet(Player player)

@@ -7,11 +7,14 @@ using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEditor;
 
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private GameObject CardPrefab;
-    [SerializeField] Deck deck;
+    [SerializeField] private GameObject BlindPrefab;
+    [SerializeField] private Deck deck;
+    [SerializeField] private BlindMaster blindMaster;
     private Bank _bank;
     [SerializeField] private Player[] _players;
     [SerializeField] private Board board;
@@ -29,12 +32,38 @@ public class GameManager : MonoBehaviour
         PlayPreFlop();
     }
 
+    void SetBlinds()
+    {
+        blindMaster.GenerateBlinds();
+        _players.First().atributes.Blind = blindMaster.SmallBlind;
+        _players[1].atributes.Blind = blindMaster.BigBlind;
+        _players.Last().atributes.Blind = blindMaster.DealerBlind;
+    }
+
     public void ShowCards(Player player)
     {
         for (int i = 0; i < 2; i++)
         {
-            player.atributes.handObject[i].GetComponent<SpriteRenderer>().sprite = player.atributes._hand[i].CardFigure.Face;
+            player.atributes.cardGameObjects[i].GetComponent<SpriteRenderer>().sprite = player.atributes._hand[i].CardFigure.Face;
         }
+    }
+
+    public void ShowBlinds()
+    {
+        foreach (var player in _players)
+        {
+            if(player.atributes.Blind != null)
+            {
+                GameObject blind = Instantiate(BlindPrefab,
+                    player.atributes.BlindPosition.transform.position,
+                    player.atributes.BlindPosition.transform.rotation);
+
+                player.atributes.blindGameObject = blind;
+                player.atributes.blindGameObject.GetComponent<SpriteRenderer>().sprite = player.atributes.Blind.BlindFigure.Face;
+            }
+
+        }
+        
     }
 
     public void HideCards(Player player)
@@ -44,15 +73,18 @@ public class GameManager : MonoBehaviour
             GameObject newCard = Instantiate(CardPrefab,
                 player.atributes.HandPosition[i].transform.position, 
                 player.atributes.HandPosition[i].transform.rotation);
-            player.atributes.handObject.Add(newCard);
 
-            player.atributes.handObject[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
+            player.atributes.cardGameObjects.Add(newCard);
+
+            player.atributes.cardGameObjects[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
         }
     }
 
 
     public void PlayPreFlop()
     {
+        SetBlinds();
+        ShowBlinds();
         for (int i = 0; i < 5; i++)
         {
             board.AddCardToBoard(cards[0]);
@@ -83,17 +115,20 @@ public class GameManager : MonoBehaviour
         {
             board.objectsOnBoard[i].GetComponent<SpriteRenderer>().sprite = board.boadCards[i].CardFigure.Face;
         }
+
+        _ = Bank.RequestBet(_players);
     }
 
     public void PlayTurn()
     {
         board.objectsOnBoard[3].GetComponent<SpriteRenderer>().sprite = board.boadCards[3].CardFigure.Face;
-
+        _ = Bank.RequestBet(_players);
     }
 
     public void PlayRiver()
     {
         board.objectsOnBoard[4].GetComponent<SpriteRenderer>().sprite = board.boadCards[4].CardFigure.Face;
+        _ = Bank.RequestBet(_players);
     }
 
     public void ShowDown()
@@ -120,7 +155,7 @@ public class GameManager : MonoBehaviour
         {
             for (int i = 0; i < 2; i++)
             {
-                player.atributes.handObject[i].GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f);
+                player.atributes.cardGameObjects[i].GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f);
             }
         }
         return winners;
@@ -155,7 +190,7 @@ public class GameManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.W))
         {
-            DefineWinners();
+            Bank.RecieveBankToWiners(DefineWinners());
         }
 
         if (Input.GetKeyDown(KeyCode.P))
