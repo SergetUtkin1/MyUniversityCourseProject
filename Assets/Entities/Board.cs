@@ -7,9 +7,9 @@ using UnityEngine;
 public class Board
 {
     [SerializeField]
-    public GameObject[] cardPlaces;
+    public List<GameObject> cardPlaces;
     public List<Card> boadCards;
-    public List<GameObject> objectsOnBoard;
+    //public List<GameObject> objectsOnBoard;
 
     public void AddCardToBoard(Card c)
     {

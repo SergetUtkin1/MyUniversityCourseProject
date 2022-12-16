@@ -9,7 +9,7 @@ using UnityEngine;
 public class Bank
 {
     public int Pot { get; set; } = 0;
-    public int CurrentBet { get; set; } = 0;
+    public int CurrentBet { get; set; } = 0; //суммарно
     public int BigBlind { get; set; } = 40;
     public int SmallBlind { get { return GetSmallBlind(); } set { SmallBlind = value; } }
 
@@ -19,6 +19,7 @@ public class Bank
 
     private int GetSmallBlind()
         => BigBlind / 2;
+
 
     public async Task RequestBet(Player[] players)
     {
@@ -33,7 +34,7 @@ public class Bank
 
             if (ListOfPlayers[index].IsBot)
             {
-                var bet = AcceptBet(BetForBot(), ListOfPlayers[index]);
+                var bet = AcceptBet(BetForBot(ListOfPlayers[index]), ListOfPlayers[index]);
                 if (bet > CurrentBet)
                 {
                     CurrentBet = bet;
@@ -55,7 +56,6 @@ public class Bank
                 }
                 else if (bet < CurrentBet)
                 {
-                    ListOfPlayers[index].Fold();
                     ListOfPlayers[index].IsActive = false;
                     ListOfPlayers.RemoveAt(index);
                 }
@@ -79,22 +79,23 @@ public class Bank
         }
     }
 
-    private int BetForBot()
-        => CurrentBet > 40 ? CurrentBet : 40;
+    private int BetForBot(Player bot)
+        => CurrentBet - bot.BetValue;
 
     public int AcceptBet(int newbet, Player player)
     {
         Pot += newbet;
         player.BetValue = newbet;
-        return newbet;
+        return player.BetValue;
     }
 
     public async Task<int> WaitingForBet(Player player)
     {
         cts = new CancellationTokenSource();
+        var timeCts = new CancellationTokenSource();
         var currentPlayerBet = player.BetValue;
         OnBettingStart.Invoke();
-        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        timeCts.CancelAfter(TimeSpan.FromSeconds(10));
 
         var flag = true;
         while(flag)
@@ -103,13 +104,17 @@ public class Bank
             {
                 flag = false;
             }
+
+            if(timeCts.Token.IsCancellationRequested)
+            {
+                player.Fold();
+            }
             await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
-        var bet = player.BetValue;
-        Pot += bet - currentPlayerBet;
+        Pot += player.BetValue - currentPlayerBet;
 
-        return bet;
+        return player.BetValue;
     }
 
     public void RecieveBankToWiners(List<Player> winners)

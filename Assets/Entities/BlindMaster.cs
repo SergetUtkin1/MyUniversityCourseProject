@@ -12,6 +12,7 @@ public class BlindMaster : MonoBehaviour
             "Dealer"
     };
 
+
     public Blind BigBlind { get; set; }
     public Blind SmallBlind { get; set; }
     public Blind DealerBlind { get; set; }
@@ -24,7 +25,7 @@ public class BlindMaster : MonoBehaviour
             {
                 Face = BlindFaces[i],
             };
-            var blind = Blind.CreateBlind(gameObject, BlindNames[i], figure);
+            var blind = new Blind(BlindNames[i], figure);
 
             switch (i)
             {

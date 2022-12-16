@@ -27,9 +27,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        cards = deck.GenerateNewDeck();
-        deck.Shuffle(cards);
-        PlayPreFlop();
+        ContinueGame();
     }
 
     void SetBlinds()
@@ -42,9 +40,11 @@ public class GameManager : MonoBehaviour
 
     public void ShowCards(Player player)
     {
+        //ICardShowable => ShowCards
         for (int i = 0; i < 2; i++)
         {
-            player.atributes.cardGameObjects[i].GetComponent<SpriteRenderer>().sprite = player.atributes._hand[i].CardFigure.Face;
+            player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().sprite = player.atributes._hand[i].CardFigure.Face;
+            player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
         }
     }
 
@@ -52,31 +52,20 @@ public class GameManager : MonoBehaviour
     {
         foreach (var player in _players)
         {
-            if(player.atributes.Blind != null)
+            player.atributes.BlindPosition.GetComponent<SpriteRenderer>().sprite = null;
+            if (player.atributes.Blind != null)
             {
-                GameObject blind = Instantiate(BlindPrefab,
-                    player.atributes.BlindPosition.transform.position,
-                    player.atributes.BlindPosition.transform.rotation);
-
-                player.atributes.blindGameObject = blind;
-                player.atributes.blindGameObject.GetComponent<SpriteRenderer>().sprite = player.atributes.Blind.BlindFigure.Face;
+                player.atributes.BlindPosition.GetComponent<SpriteRenderer>().sprite = player.atributes.Blind.BlindFigure.Face;
             }
-
         }
-        
     }
 
     public void HideCards(Player player)
     {
         for (int i = 0; i < 2; i++)
         {
-            GameObject newCard = Instantiate(CardPrefab,
-                player.atributes.HandPosition[i].transform.position, 
-                player.atributes.HandPosition[i].transform.rotation);
-
-            player.atributes.cardGameObjects.Add(newCard);
-
-            player.atributes.cardGameObjects[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
+            player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
+            player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
         }
     }
 
@@ -88,12 +77,8 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < 5; i++)
         {
             board.AddCardToBoard(cards[0]);
-            GameObject newCard = Instantiate(CardPrefab, 
-                board.cardPlaces[i].transform.position,
-                board.cardPlaces[i].transform.rotation);
-            board.objectsOnBoard.Add(newCard);
 
-            newCard.GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
+            board.cardPlaces[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
             cards.RemoveAt(0);
         }
         foreach (var player in _players)
@@ -113,7 +98,7 @@ public class GameManager : MonoBehaviour
     {
         for (int i = 0; i < 3; i++)
         {
-            board.objectsOnBoard[i].GetComponent<SpriteRenderer>().sprite = board.boadCards[i].CardFigure.Face;
+            board.cardPlaces[i].GetComponent<SpriteRenderer>().sprite = board.boadCards[i].CardFigure.Face;
         }
 
         _ = Bank.RequestBet(_players);
@@ -121,13 +106,13 @@ public class GameManager : MonoBehaviour
 
     public void PlayTurn()
     {
-        board.objectsOnBoard[3].GetComponent<SpriteRenderer>().sprite = board.boadCards[3].CardFigure.Face;
+        board.cardPlaces[3].GetComponent<SpriteRenderer>().sprite = board.boadCards[3].CardFigure.Face;
         _ = Bank.RequestBet(_players);
     }
 
     public void PlayRiver()
     {
-        board.objectsOnBoard[4].GetComponent<SpriteRenderer>().sprite = board.boadCards[4].CardFigure.Face;
+        board.cardPlaces[4].GetComponent<SpriteRenderer>().sprite = board.boadCards[4].CardFigure.Face;
         _ = Bank.RequestBet(_players);
     }
 
@@ -155,10 +140,42 @@ public class GameManager : MonoBehaviour
         {
             for (int i = 0; i < 2; i++)
             {
-                player.atributes.cardGameObjects[i].GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f);
+                player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 1);
             }
         }
         return winners;
+    }
+
+    public void MovePlayers()
+    {
+        var temp = _players[0];
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if(i != _players.Length - 1)
+            {
+                _players[i] = _players[ i + 1];
+            }
+            else
+            {
+                _players[i] = temp;
+            }
+            Debug.Log(_players[i].IsBot);
+        }
+    }
+
+    public void ContinueGame()
+    {
+        foreach (var player in _players)
+        {
+            player.NullifyPlayer();
+        }
+        board.boadCards.Clear();
+        Bank.NullifyCurrentBank();
+        MovePlayers();
+        //_players = MovePlayers(_players);
+        cards = deck.GenerateNewDeck();
+        deck.Shuffle(cards);
+        PlayPreFlop();
     }
 
     public void RestartGame()
@@ -196,6 +213,11 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.P))
         {
             RestartGame();
+        }
+
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            ContinueGame();
         }
     }
 }

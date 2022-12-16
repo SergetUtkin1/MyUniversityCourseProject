@@ -40,6 +40,15 @@ public class Player : MonoBehaviour
     public bool IsBot = true;
 
     public bool IsActive { get; set; } = true;
+
+    public void NullifyPlayer()
+    {
+        _betValue = 0;
+        IsActive = true;
+        atributes.Hand.Clear();
+        atributes.Blind = null;
+    }
+
     public int BetValue
     {
         get { return _betValue; }
@@ -164,8 +173,8 @@ public class Player : MonoBehaviour
         {
             throw new Exception("Cannot convert text to int");
         }
-        gameManager.Bank.cts.Cancel();
         DisableButtons();
+        gameManager.Bank.cts.Cancel();
     }
 
     public void Call()
@@ -173,15 +182,15 @@ public class Player : MonoBehaviour
         Debug.Log("It's call");
         var newBet = gameManager.Bank.CurrentBet - BetValue;
         BetValue = newBet;
-        gameManager.Bank.cts.Cancel();
         DisableButtons();
+        gameManager.Bank.cts.Cancel();
     }
 
     public void Fold()
     {
         Debug.Log("It's Fold");
         BetValue = 0;
-        gameManager.Bank.cts.Cancel();
         DisableButtons();
+        gameManager.Bank.cts.Cancel();
     }
 }

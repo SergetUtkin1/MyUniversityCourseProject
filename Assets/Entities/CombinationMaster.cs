@@ -44,6 +44,10 @@ public class CombinationMaster
                     winners = FindWinnersFullHouse(players);
                     break;
 
+                case "Flush":
+                    winners = FindWinnersFLush(players);
+                    break;
+
                 case "Two Pair":
                     winners = FindWinnersTwoPair(players);
                     break;
@@ -55,7 +59,7 @@ public class CombinationMaster
 
             if (winners.Count > 1)
             {
-                winners = FindWinnersByKicker(players, boardCards);
+                winners = FindWinnersByKicker(winners, boardCards);
             }
 
             return winners;
@@ -72,26 +76,82 @@ public class CombinationMaster
 
     public static List<Player> FindWinnersByKicker(List<Player> players, List<Card> boardCards)
     {
-        var highCard = FindHighCard(ConCatBoardHand(boardCards, players.First())
-            .FindAll(x => !players.First().combination.cards
-            .Any(c => c==x)));
-        var winners = new List<Player>() { players.First() };
-        for (int i = 1; i < players.Count; i++)
+        if (players.First().combination.cards.Count != 5)
         {
-            var hcChallenger = FindHighCard(ConCatBoardHand(boardCards, players.First())
-                .FindAll(x => !players[i].combination.cards
-                .Any(c => c == x)));
-            if (hcChallenger.First() == highCard.First())
+            var winners = new List<Player>() { players.First() };
+            var kickers = ConCatBoardHand(boardCards, players.First())
+            .FindAll(x => !players.First().combination.cards
+            .Any(c => c == x)).OrderBy(x => x.Rank).TakeLast(5 - players.First().combination.cards.Count).ToList();
+            for (int i = 1; i < players.Count; i++)
             {
-                winners.Add(players[i]);
+                var kickersChallenger = ConCatBoardHand(boardCards, players[i])
+                    .FindAll(x => !players[i].combination.cards
+                    .Any(c => c == x)).OrderBy(x => x.Rank).TakeLast(5 - players[i].combination.cards.Count).ToList();
+
+                var cnt = 0;
+                for (int j = kickers.Count - 1; j >= 0; j--)
+                {
+                    if (kickers[j] == kickersChallenger[j])
+                    {
+                        cnt++;
+                    }
+                    else if(kickers[j] < kickersChallenger[j])
+                    {
+                        winners.Clear();
+                        winners.Add(players[i]);
+                        kickers = kickersChallenger;
+                        break;
+                    }
+                }
+
+                if(cnt == kickers.Count)
+                {
+                    winners.Add(players[i]);
+                }
             }
-            else if (hcChallenger.First() > highCard.First())
-            {
-                highCard = hcChallenger;
-                winners.Clear();
-                winners.Add(players[i]);
-            }
+            return winners;
         }
+        else
+        {
+            return players;
+        }
+    }
+
+    public static List<Player> FindWinnersFLush(List<Player> players)
+    {
+        var highFlush = players.First().combination.cards
+            .OrderByDescending(x => x.Rank).Take(5).ToList();
+        var winners = new List<Player>() { players.First() };
+        for (int i = 0; i < players.Count; i++)
+        {
+            var highFlushChallenger = players[i].combination.cards
+            .OrderByDescending(x => x.Rank).Take(5).ToList();
+
+            var flag = true;
+            for (int j = 0; j < 5; j++)
+            {
+                if (highFlush[j] < highFlushChallenger[j])
+                {
+                    highFlush = highFlushChallenger;
+                    winners.Clear();
+                    winners.Add(players[i]);
+                    flag = false;
+                    break;
+                }
+                else if (highFlush[j] > highFlushChallenger[j])
+                {
+                    flag = false;
+                    break;
+                }
+            }
+
+            if(flag)
+            {
+                winners.Add(players[i]);
+            }
+
+        }
+
         return winners;
     }
 
@@ -151,15 +211,15 @@ public class CombinationMaster
 
     public static List<Player> FindWinnersTwoPair(List<Player> players)
     {
-        var highCard = FindHighCard(FindPair(players.First().combination.cards));
+        var highCard = FindHighCard(players.First().combination.cards);
         var winners = new List<Player>() { players.First() };
         for (int i = 1; i < players.Count; i++)
         {
-            var hcChallenger = FindHighCard(FindPair(players[i].combination.cards));
+            var hcChallenger = FindHighCard(players[i].combination.cards);
             if (hcChallenger.First() == highCard.First())
             {
-                hcChallenger = FindPair(players[i].combination.cards.FindAll(x => highCard.Contains(x)));
-                highCard = FindPair(winners.First().combination.cards.FindAll(x => hcChallenger.Contains(x)));
+                hcChallenger = FindPair(players[i].combination.cards.FindAll(x => !hcChallenger.Contains(x)));
+                highCard = FindPair(winners.First().combination.cards.FindAll(x => !highCard.Contains(x)));
                 if (highCard.First() == hcChallenger.First())
                 {
                     winners.Add(players[i]);
@@ -230,17 +290,17 @@ public class CombinationMaster
     public static List<Card> FindPair(List<Card> cards)
     {
         var combinations = new List<Card>();
-        cards = cards.OrderBy(x => x.Rank).ToList();
+        cards = cards.OrderByDescending(x => x.Rank).ToList();
         combinations.AddRange(cards.FindAll(c => cards.Count(x => x == c) == 2));
 
-        return combinations;
+        return combinations.Take(2).ToList();
     }
 
     public static List<Card> FindTwoPair(List<Card> cards)
     {
         var combinations = new List<Card>();
         var cardsCopy = new List<Card>(cards);
-        cards = cards.OrderBy(x => x.Rank).ToList();
+        cardsCopy.OrderByDescending(x => x.Value);
         for (int i = 0; i < 2; i++)
         {
             var pair = FindPair(cardsCopy);
@@ -248,17 +308,17 @@ public class CombinationMaster
             cardsCopy.RemoveAll(x => pair.Contains(x));
         }
 
-        return combinations.Count == 4 ? combinations : new List<Card>();
+        return combinations.Count >= 4 ? combinations.Take(4).ToList() : new List<Card>();
     }
 
     public static List<Card> FindThreeOfKind(List<Card> cards)
     {
         var combinations = new List<Card>();
-        cards = cards.OrderBy(x => x.Rank).ToList();
+        cards = cards.OrderByDescending(x => x.Rank).ToList();
 
         combinations.AddRange(cards.FindAll(c => cards.Count(x => x == c) == 3));
 
-        return combinations;
+        return combinations.Take(3).ToList();
     }
 
     public static List<Card> FindStraight(List<Card> cards)
@@ -326,11 +386,11 @@ public class CombinationMaster
     {
         var combinations = new List<Card>();
         var cardCopy = new List<Card>(cards);
-        cards = cards.OrderBy(x => x.Rank).ToList();
+        cardCopy.OrderByDescending(x => x.Rank);
         var threeCards = FindThreeOfKind(cardCopy);
         combinations.AddRange(threeCards);
         cardCopy.RemoveAll(x => threeCards.Contains(x));
-        combinations.AddRange(cardCopy.FindAll(c => cardCopy.Count(x => x == c) >= 2));
+        combinations.AddRange(FindPair(cardCopy));
 
         return combinations.Count != 5 ? new List<Card>() : combinations;
     }
