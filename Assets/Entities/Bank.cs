@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -12,6 +13,8 @@ public class Bank
     public int CurrentBet { get; set; } = 0; //суммарно
     public int BigBlind { get; set; } = 40;
     public int SmallBlind { get { return GetSmallBlind(); } set { SmallBlind = value; } }
+    private int _respsonses;
+    private int _additionalAmount;
 
     public CancellationTokenSource cts { get; set; } = new CancellationTokenSource();
 
@@ -20,44 +23,69 @@ public class Bank
     private int GetSmallBlind()
         => BigBlind / 2;
 
+    public void AcceptBlinds(Player[] players)
+    {
+        foreach (var player in players)
+        {
+            if(player.atributes.Blind != null)
+                switch (player.atributes.Blind.Name)
+                {
+                    case "Big Blind":
+                        player.BetValue = BigBlind;
+                        CurrentBet = BigBlind;
+                        break;
+
+                    case "Small Blind":
+                        player.BetValue = SmallBlind;
+                        break;
+
+                    default:
+                        break;
+                }
+        }
+        _respsonses = 2;
+        _additionalAmount = 1;
+    }
 
     public async Task RequestBet(Player[] players)
     {
         var ListOfPlayers = players.ToList().FindAll(p => p.IsActive == true);
-
-        var respsonses = 0;
+        
         var CBIsChanched = false;
-        var additionalAmount = 0;
-        while(respsonses < ListOfPlayers.Count + additionalAmount)
-        {
-            var index = respsonses % ListOfPlayers.Count;
 
-            if (ListOfPlayers[index].IsBot)
+        while(_respsonses < ListOfPlayers.Count + _additionalAmount)
+        {
+            var index = _respsonses % ListOfPlayers.Count;
+
+            if(ListOfPlayers[index].IsActive)
             {
-                var bet = AcceptBet(BetForBot(ListOfPlayers[index]), ListOfPlayers[index]);
-                if (bet > CurrentBet)
+                if (ListOfPlayers[index].IsBot)
                 {
-                    CurrentBet = bet;
-                    CBIsChanched = true;
+                    var bet = AcceptBet(ListOfPlayers[index]);
+                    if (bet > CurrentBet)
+                    {
+                        CurrentBet = bet;
+                        CBIsChanched = true;
+                    }
+                    else if (bet < CurrentBet)
+                    {
+                        ListOfPlayers[index].IsActive = false;
+                        //ListOfPlayers.RemoveAt(index);
+                    }
                 }
-                else if (bet < CurrentBet)
+                else
                 {
-                    ListOfPlayers[index].IsActive = false;
-                    ListOfPlayers.RemoveAt(index);
-                }
-            }
-            else
-            {
-                var bet = await WaitingForBet(ListOfPlayers[index]);
-                if (bet > CurrentBet)
-                {
-                    CurrentBet = bet;
-                    CBIsChanched = true;
-                }
-                else if (bet < CurrentBet)
-                {
-                    ListOfPlayers[index].IsActive = false;
-                    ListOfPlayers.RemoveAt(index);
+                    var bet = await WaitingForBet(ListOfPlayers[index]);
+                    if (bet > CurrentBet)
+                    {
+                        CurrentBet = bet;
+                        CBIsChanched = true;
+                    }
+                    else if (bet < CurrentBet)
+                    {
+                        ListOfPlayers[index].IsActive = false;
+                        //ListOfPlayers.RemoveAt(index);
+                    }
                 }
             }
 
@@ -65,25 +93,28 @@ public class Bank
             {
                 if(index == 0)
                 {
-                    respsonses = 0;
+                    _respsonses = 0;
                 }
                 else
                 {
-                    additionalAmount = index;
+                    _additionalAmount = index;
                 }
 
                 CBIsChanched = false;
             }
 
-            respsonses++;
+            _respsonses++;
         }
+        _respsonses = 0;
+        _additionalAmount = 0;
     }
 
     private int BetForBot(Player bot)
         => CurrentBet - bot.BetValue;
 
-    public int AcceptBet(int newbet, Player player)
+    public int AcceptBet(Player player)
     {
+        var newbet = BetForBot(player);
         Pot += newbet;
         player.BetValue = newbet;
         return player.BetValue;

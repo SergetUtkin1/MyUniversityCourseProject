@@ -45,7 +45,7 @@ public class Player : MonoBehaviour
     {
         _betValue = 0;
         IsActive = true;
-        atributes.Hand.Clear();
+        atributes.Hand = new List<Card>();
         atributes.Blind = null;
     }
 

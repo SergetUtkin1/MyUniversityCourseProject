@@ -74,6 +74,7 @@ public class GameManager : MonoBehaviour
     {
         SetBlinds();
         ShowBlinds();
+        Bank.AcceptBlinds(_players);
         for (int i = 0; i < 5; i++)
         {
             board.AddCardToBoard(cards[0]);
@@ -90,7 +91,6 @@ public class GameManager : MonoBehaviour
             if (!player.IsBot)
             ShowCards(player);  
         }
-
         _ = Bank.RequestBet(_players);
     }
 
