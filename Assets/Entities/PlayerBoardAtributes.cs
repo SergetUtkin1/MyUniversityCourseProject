@@ -6,6 +6,7 @@ using UnityEngine;
 [Serializable]
 public class PlayerBoardAtributes
 {
+    [SerializeField] public GameObject TimerPosition;
     [SerializeField] public GameObject BlindPosition;
     [SerializeField] public GameObject[] HandPosition;
     public List<Card> _hand;

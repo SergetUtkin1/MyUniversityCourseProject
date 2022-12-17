@@ -70,21 +70,17 @@ public class CombinationMaster
         }    
     }
 
-    // TO UTILS
-    public static List<Card> ConCatBoardHand(List<Card> boardCards, Player player)
-        => (new List<Card>(boardCards).Concat(player.atributes.Hand)).ToList();
-
     public static List<Player> FindWinnersByKicker(List<Player> players, List<Card> boardCards)
     {
         if (players.First().combination.cards.Count != 5)
         {
             var winners = new List<Player>() { players.First() };
-            var kickers = ConCatBoardHand(boardCards, players.First())
+            var kickers = Utils.ConCatBoardHand(boardCards, players.First())
             .FindAll(x => !players.First().combination.cards
             .Any(c => c == x)).OrderBy(x => x.Rank).TakeLast(5 - players.First().combination.cards.Count).ToList();
             for (int i = 1; i < players.Count; i++)
             {
-                var kickersChallenger = ConCatBoardHand(boardCards, players[i])
+                var kickersChallenger = Utils.ConCatBoardHand(boardCards, players[i])
                     .FindAll(x => !players[i].combination.cards
                     .Any(c => c == x)).OrderBy(x => x.Rank).TakeLast(5 - players[i].combination.cards.Count).ToList();
 
@@ -117,44 +113,6 @@ public class CombinationMaster
         }
     }
 
-    public static List<Player> FindWinnersFLush(List<Player> players)
-    {
-        var highFlush = players.First().combination.cards
-            .OrderByDescending(x => x.Rank).Take(5).ToList();
-        var winners = new List<Player>() { players.First() };
-        for (int i = 0; i < players.Count; i++)
-        {
-            var highFlushChallenger = players[i].combination.cards
-            .OrderByDescending(x => x.Rank).Take(5).ToList();
-
-            var flag = true;
-            for (int j = 0; j < 5; j++)
-            {
-                if (highFlush[j] < highFlushChallenger[j])
-                {
-                    highFlush = highFlushChallenger;
-                    winners.Clear();
-                    winners.Add(players[i]);
-                    flag = false;
-                    break;
-                }
-                else if (highFlush[j] > highFlushChallenger[j])
-                {
-                    flag = false;
-                    break;
-                }
-            }
-
-            if(flag)
-            {
-                winners.Add(players[i]);
-            }
-
-        }
-
-        return winners;
-    }
-
     public static List<Player> FindWinnersByHighCard(List<Player> players)
     {
         var highCard = FindHighCard(players.First().combination.cards);
@@ -165,39 +123,6 @@ public class CombinationMaster
             if (hcChallenger.First() == highCard.First())
             {
                 winners.Add(players[i]);
-            }
-            else if (hcChallenger.First() > highCard.First())
-            {
-                highCard = hcChallenger;
-                winners.Clear();
-                winners.Add(players[i]);
-            }
-        }
-        return winners;
-    }
-
-    public static List<Player> FindWinnersFullHouse(List<Player> players)
-    {
-        var highCard = FindHighCard(FindThreeOfKind(players.First().combination.cards));
-        var winners = new List<Player>() { players.First() };
-        for (int i = 1; i < players.Count; i++)
-        {
-            var hcChallenger = FindHighCard(FindThreeOfKind(players[i].combination.cards));
-            if (hcChallenger.First() == highCard.First())
-            {
-                hcChallenger = FindPair(players[i].combination.cards);
-                highCard = FindPair(winners.First().combination.cards);
-                if (highCard.First()  == hcChallenger.First())
-                {
-                    winners.Add(players[i]);
-                    highCard = FindHighCard(FindThreeOfKind(winners.First().combination.cards));
-                }
-                else if(hcChallenger.First() > highCard.First())
-                {
-                    highCard = FindHighCard(FindThreeOfKind(players[i].combination.cards));
-                    winners.Clear();
-                    winners.Add(players[i]);
-                }
             }
             else if (hcChallenger.First() > highCard.First())
             {
@@ -242,6 +167,76 @@ public class CombinationMaster
         return winners;
     }
 
+    public static List<Player> FindWinnersFLush(List<Player> players)
+    {
+        var highFlush = players.First().combination.cards
+            .OrderByDescending(x => x.Rank).Take(5).ToList();
+        var winners = new List<Player>() { players.First() };
+        for (int i = 0; i < players.Count; i++)
+        {
+            var highFlushChallenger = players[i].combination.cards
+            .OrderByDescending(x => x.Rank).Take(5).ToList();
+
+            var flag = true;
+            for (int j = 0; j < 5; j++)
+            {
+                if (highFlush[j] < highFlushChallenger[j])
+                {
+                    highFlush = highFlushChallenger;
+                    winners.Clear();
+                    winners.Add(players[i]);
+                    flag = false;
+                    break;
+                }
+                else if (highFlush[j] > highFlushChallenger[j])
+                {
+                    flag = false;
+                    break;
+                }
+            }
+
+            if(flag)
+            {
+                winners.Add(players[i]);
+            }
+
+        }
+
+        return winners;
+    }
+
+    public static List<Player> FindWinnersFullHouse(List<Player> players)
+    {
+        var highCard = FindHighCard(FindThreeOfKind(players.First().combination.cards));
+        var winners = new List<Player>() { players.First() };
+        for (int i = 1; i < players.Count; i++)
+        {
+            var hcChallenger = FindHighCard(FindThreeOfKind(players[i].combination.cards));
+            if (hcChallenger.First() == highCard.First())
+            {
+                hcChallenger = FindPair(players[i].combination.cards);
+                highCard = FindPair(winners.First().combination.cards);
+                if (highCard.First()  == hcChallenger.First())
+                {
+                    winners.Add(players[i]);
+                    highCard = FindHighCard(FindThreeOfKind(winners.First().combination.cards));
+                }
+                else if(hcChallenger.First() > highCard.First())
+                {
+                    highCard = FindHighCard(FindThreeOfKind(players[i].combination.cards));
+                    winners.Clear();
+                    winners.Add(players[i]);
+                }
+            }
+            else if (hcChallenger.First() > highCard.First())
+            {
+                highCard = hcChallenger;
+                winners.Clear();
+                winners.Add(players[i]);
+            }
+        }
+        return winners;
+    }
 
     public static Combination FindBestCombination(List<Card> cards)
     {

@@ -11,23 +11,25 @@ using UnityEditor;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField] private GameObject CardPrefab;
-    [SerializeField] private GameObject BlindPrefab;
+    //[SerializeField] private GameObject CardPrefab;
+    //[SerializeField] private GameObject BlindPrefab;
     [SerializeField] private Deck deck;
     [SerializeField] private BlindMaster blindMaster;
-    private Bank _bank;
+    //private Bank _bank;
     [SerializeField] private Player[] _players;
     [SerializeField] private Board board;
+
     private List<Card> cards;
     private Combination Nuts;
 
     [SerializeField] private Text _PotText;
 
+    public bool IsBettingFinished { get; set; } = false;
     public Bank Bank { get; private set; } = new Bank();
 
     void Start()
     {
-        ContinueGame();
+        StartCoroutine(PlayGameSequence());
     }
 
     void SetBlinds()
@@ -74,7 +76,9 @@ public class GameManager : MonoBehaviour
     {
         SetBlinds();
         ShowBlinds();
+
         Bank.AcceptBlinds(_players);
+
         for (int i = 0; i < 5; i++)
         {
             board.AddCardToBoard(cards[0]);
@@ -82,6 +86,7 @@ public class GameManager : MonoBehaviour
             board.cardPlaces[i].GetComponent<SpriteRenderer>().sprite = deck.GetComponent<CardNames>().cardBack;
             cards.RemoveAt(0);
         }
+
         foreach (var player in _players)
         {
             player.atributes.AddCardToHand(cards[0]);
@@ -121,26 +126,29 @@ public class GameManager : MonoBehaviour
         Nuts = CombinationMaster.FindBestCombination((new List<Card>(_players.First().atributes.Hand)).Concat(board.boadCards).ToList());
         foreach (var player in _players)
         {
-            ShowCards(player);
-            player.combination = CombinationMaster.FindBestCombination((new List<Card>(player.atributes.Hand)).Concat(board.boadCards).ToList());
-            if (player.combination.Rank < Nuts.Rank)
-                Nuts = player.combination;
+            if(player.IsActive)
+            {
+                ShowCards(player);
+                player.combination = CombinationMaster.FindBestCombination((new List<Card>(player.atributes.Hand)).Concat(board.boadCards).ToList());
+                if (player.combination.Rank < Nuts.Rank)
+                    Nuts = player.combination;
 
 
-            Debug.Log($"player with: {player.combination.Name + player.combination.Rank}");
+                Debug.Log($"player with: {player.combination.Name + player.combination.Rank}");
+            }
         }
         
     }
 
     public List<Player> DefineWinners()
     {
-        var winners = CombinationMaster.FindWinners(_players.ToList().FindAll(p => p.combination.Rank == Nuts.Rank), board.boadCards);
+        var winners = CombinationMaster.FindWinners(_players.ToList().FindAll(p => p.combination.Rank == Nuts.Rank && p.IsActive), board.boadCards);
         
         foreach(var player in winners)
         {
             for (int i = 0; i < 2; i++)
             {
-                player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 1);
+                player.atributes.HandPosition[i].GetComponent<SpriteRenderer>().color = new Color(1, 0.8f, 0.05f, 1);
             }
         }
         return winners;
@@ -167,12 +175,12 @@ public class GameManager : MonoBehaviour
     {
         foreach (var player in _players)
         {
+            if(player.Balance != 0)
             player.NullifyPlayer();
         }
         board.boadCards.Clear();
         Bank.NullifyCurrentBank();
         MovePlayers();
-        //_players = MovePlayers(_players);
         cards = deck.GenerateNewDeck();
         deck.Shuffle(cards);
         PlayPreFlop();
@@ -180,6 +188,21 @@ public class GameManager : MonoBehaviour
 
     public void RestartGame()
         => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+    void OnEnable()
+    {
+        Bank.OnBettingFinished += BettingEndLisentner;
+    }
+
+    void OnDisable()
+    {
+        Bank.OnBettingFinished -= BettingEndLisentner;
+    }
+
+    private void BettingEndLisentner()
+    {
+        IsBettingFinished = true;
+    }
 
     void Update()
     {
@@ -219,5 +242,45 @@ public class GameManager : MonoBehaviour
         {
             ContinueGame();
         }
+    }
+
+    IEnumerator PlayGameSequence()
+    {
+        ContinueGame();
+        while(!IsBettingFinished)
+        {
+            yield return null;
+        }
+        yield return new WaitForSeconds(1);
+        IsBettingFinished = false;
+
+        PlayFlop();
+        while (!IsBettingFinished)
+        {
+            yield return null;
+        }
+        yield return new WaitForSeconds(1);
+        IsBettingFinished = false;
+
+        PlayTurn();
+        while (!IsBettingFinished)
+        {
+            yield return null;
+        }
+        yield return new WaitForSeconds(1);
+        IsBettingFinished = false;
+
+        PlayRiver();
+        while (!IsBettingFinished)
+        {
+            yield return null;
+        }
+        yield return new WaitForSeconds(1);
+        IsBettingFinished = false;
+
+        ShowDown();
+        yield return new WaitForSeconds(1);
+        DefineWinners();
+
     }
 }

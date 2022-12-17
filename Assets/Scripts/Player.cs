@@ -7,7 +7,8 @@ using UnityEngine.WSA;
 
 public class Player : MonoBehaviour
 {
-    [SerializeField] private GameManager gameManager;
+    [SerializeField] private GameManager _gameManager;
+    [SerializeField] private Timer _timer;
 
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
     [SerializeField] private Button? CallButton;
@@ -22,13 +23,13 @@ public class Player : MonoBehaviour
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
     [SerializeField] private InputField? BetInputField;
 #pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+    [SerializeField] private Slider? BetSlider;
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+
 
     [SerializeField] private Text _betText;
     [SerializeField] private Text _balanceText;
-
-    public float timeRemaining = 10;
-    public float timeRemainingbefore = 10;
-    public bool timerIsRunning = false;
 
     private int _balance = 1000;
     private int _betValue = 0;
@@ -38,16 +39,52 @@ public class Player : MonoBehaviour
 
     [SerializeField] 
     public bool IsBot = true;
+    private bool _isActive = true;
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive
+    { 
+        get { return _isActive; }
+        set
+        {
+            if (value == false)
+            {
+                foreach (var card in atributes.HandPosition)
+                {
+                    card.GetComponent<SpriteRenderer>().color = new Color(0.3f, 0.3f, 0.03f, 1);
+                }
+            }
+            else
+            {
+                foreach (var card in atributes.HandPosition)
+                {
+                    card.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
+                }
+            }
+            _isActive = value;
+        }
+    }
+
+    public void SetUpSliderValue()
+    {
+        BetSlider.minValue = _gameManager.Bank.CurrentBetValue - BetValue;
+        BetSlider.maxValue = Balance;
+        BetSlider.value = BetSlider.minValue;
+    }
 
     public void NullifyPlayer()
     {
         _betValue = 0;
+        BetValue = 0;
         IsActive = true;
         atributes.Hand = new List<Card>();
         atributes.Blind = null;
     }
+
+    public void StartPlayerTimer()
+        => _timer.StartTimer(atributes.TimerPosition.transform.position);
+
+    public void StopPlayerTimer()
+        => _timer.StopTimer();
 
     public int BetValue
     {
@@ -74,10 +111,12 @@ public class Player : MonoBehaviour
             {
                 throw new Exception("Value of balance cannot be negative");
             }
+
             _balanceText.text = $"Balance: {value}";
             _balance = value; 
         }
     }
+
 
     void Start()
     {
@@ -87,31 +126,9 @@ public class Player : MonoBehaviour
         }    
     }
 
-
-    private void StopPlayerTimer()
-        => timerIsRunning = false;
-
     void Update()
     {
-        if (timerIsRunning)
-        {
-            if (timeRemaining > 0)
-            {
-                float seconds = Mathf.FloorToInt(timeRemaining % 60);
-                if(seconds < timeRemainingbefore)
-                {
-                    Debug.Log(seconds);
-                    timeRemainingbefore = seconds;
-                }
-                timeRemaining -= Time.deltaTime;
-            }
-            else
-            {
-                Debug.Log("Time has run out!");
-                timeRemaining = 0;
-                StopPlayerTimer();
-            }
-        }
+
     }
 
     private void OnEnable()
@@ -122,19 +139,42 @@ public class Player : MonoBehaviour
             FoldButton.onClick.AddListener(Fold);
             BetButton.onClick.AddListener(Bet);
 
-            CallButton.onClick.AddListener(StopPlayerTimer);
-            FoldButton.onClick.AddListener(StopPlayerTimer);
-            BetButton.onClick.AddListener(StopPlayerTimer);
+            BetSlider.onValueChanged.AddListener(UpdateBetInputFeid);
 
-            gameManager.Bank.OnBettingStart += BetResponse;
+            _gameManager.Bank.OnBettingStart += BetResponse;
+
         }
+
+    }
+
+    private void UpdateBetInputFeid(float value)
+    {
+        BetInputField.text = Math.Floor(value).ToString();
+    }
+
+    private void OnDisable()
+    {
+        if (!IsBot)
+        {
+            CallButton.onClick.RemoveAllListeners();
+            FoldButton.onClick.RemoveAllListeners();
+            BetButton.onClick.RemoveAllListeners();
+
+            _gameManager.Bank.OnBettingStart -= BetResponse;
+        }
+
     }
 
     public void EnableButtons()
     {
+        SetUpSliderValue();
+
         CallButton.interactable = true;
         FoldButton.interactable = true;
         BetButton.interactable = true;
+
+        BetSlider.interactable = true;
+
         Debug.Log("Buttons are enabled");
     }
 
@@ -143,17 +183,16 @@ public class Player : MonoBehaviour
         CallButton.interactable = false;
         FoldButton.interactable = false;
         BetButton.interactable = false;
+
+        BetSlider.interactable = false;
+
         Debug.Log("Buttons are disabled");
     }
 
     private void BetResponse()
     {
         EnableButtons();
-        Debug.Log("Waiting for bet...");
-
-        timeRemainingbefore = 10;
-        timeRemaining = timeRemainingbefore;
-        timerIsRunning = true;      
+        Debug.Log("Waiting for bet...");     
     }
 
     public void Bet()
@@ -174,16 +213,16 @@ public class Player : MonoBehaviour
             throw new Exception("Cannot convert text to int");
         }
         DisableButtons();
-        gameManager.Bank.cts.Cancel();
+        _gameManager.Bank.BetCancellationTokenSource.Cancel();
     }
 
     public void Call()
     {
         Debug.Log("It's call");
-        var newBet = gameManager.Bank.CurrentBet - BetValue;
+        var newBet = _gameManager.Bank.CurrentBetValue - BetValue;
         BetValue = newBet;
         DisableButtons();
-        gameManager.Bank.cts.Cancel();
+        _gameManager.Bank.BetCancellationTokenSource.Cancel();
     }
 
     public void Fold()
@@ -191,6 +230,7 @@ public class Player : MonoBehaviour
         Debug.Log("It's Fold");
         BetValue = 0;
         DisableButtons();
-        gameManager.Bank.cts.Cancel();
+        _gameManager.Bank.BetCancellationTokenSource.Cancel();
     }
+
 }

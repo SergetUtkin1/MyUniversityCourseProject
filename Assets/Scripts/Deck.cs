@@ -31,7 +31,7 @@ public class Deck : MonoBehaviour
                 {
                     Face = cardConsts.cardFaces[cnt],
                 };
-                Card card = Card.CreateCard(gameObject, val, s, figure);
+                Card card =Card.CreateCard(gameObject, val, s, figure);
                 new_deck.Add(card);
                 cnt++;
             }

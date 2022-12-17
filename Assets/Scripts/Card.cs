@@ -21,32 +21,32 @@ public class Card : MonoBehaviour, IComparable<Card>
 
     public int CompareTo(Card obj)
     {
-        return Deck.GetIndexOfCard(Value) - Deck.GetIndexOfCard(obj.Value);
+        return Rank - obj.Rank;
     }
 
     public static int operator -(Card card1, Card card2)
     {
-        return Deck.GetIndexOfCard(card1.Value) - Deck.GetIndexOfCard(card2.Value);
+        return card1.Rank - card2.Rank;
     }
 
     public static bool operator >(Card card1, Card card2)
     {
-        return Deck.GetIndexOfCard(card1.Value) > Deck.GetIndexOfCard(card2.Value);
+        return card1.Rank > card2.Rank;
     }
 
     public static bool operator <(Card card1, Card card2)
     {
-        return Deck.GetIndexOfCard(card1.Value) < Deck.GetIndexOfCard(card2.Value);
+        return card1.Rank < card2.Rank;
     }
 
     public static bool operator ==(Card card1, Card card2)
     {
-        return Deck.GetIndexOfCard(card1.Value) == Deck.GetIndexOfCard(card2.Value);
+        return card1.Rank == card2.Rank;
     }
 
     public static bool operator !=(Card card1, Card card2)
     {
-        return Deck.GetIndexOfCard(card1.Value) != Deck.GetIndexOfCard(card2.Value);
+        return card1.Rank != card2.Rank;
     }
 
     public override bool Equals(object other)

@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class BlindMaster : MonoBehaviour
 {
-    [SerializeField] private Sprite[] BlindFaces;
+    [SerializeField] 
+    private Sprite[] BlindFaces;
     private readonly string[] BlindNames = {
         
             "Big Blind",

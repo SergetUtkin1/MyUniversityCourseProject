@@ -10,15 +10,16 @@ using UnityEngine;
 public class Bank
 {
     public int Pot { get; set; } = 0;
-    public int CurrentBet { get; set; } = 0; //суммарно
+    public int CurrentBetValue { get; set; } = 0; //суммарно
     public int BigBlind { get; set; } = 40;
     public int SmallBlind { get { return GetSmallBlind(); } set { SmallBlind = value; } }
     private int _respsonses;
     private int _additionalAmount;
 
-    public CancellationTokenSource cts { get; set; } = new CancellationTokenSource();
+    public CancellationTokenSource BetCancellationTokenSource { get; set; } = new CancellationTokenSource();
 
     public Action OnBettingStart;
+    public Action OnBettingFinished;
 
     private int GetSmallBlind()
         => BigBlind / 2;
@@ -32,11 +33,13 @@ public class Bank
                 {
                     case "Big Blind":
                         player.BetValue = BigBlind;
-                        CurrentBet = BigBlind;
+                        Pot += BigBlind;
+                        CurrentBetValue = BigBlind;
                         break;
 
                     case "Small Blind":
                         player.BetValue = SmallBlind;
+                        Pot += SmallBlind;
                         break;
 
                     default:
@@ -49,7 +52,7 @@ public class Bank
 
     public async Task RequestBet(Player[] players)
     {
-        var ListOfPlayers = players.ToList().FindAll(p => p.IsActive == true);
+        var ListOfPlayers = players.ToList();
         
         var CBIsChanched = false;
 
@@ -59,33 +62,16 @@ public class Bank
 
             if(ListOfPlayers[index].IsActive)
             {
-                if (ListOfPlayers[index].IsBot)
+                var bet = await WaitingForBet(ListOfPlayers[index]);
+                if (bet > CurrentBetValue)
                 {
-                    var bet = AcceptBet(ListOfPlayers[index]);
-                    if (bet > CurrentBet)
-                    {
-                        CurrentBet = bet;
-                        CBIsChanched = true;
-                    }
-                    else if (bet < CurrentBet)
-                    {
-                        ListOfPlayers[index].IsActive = false;
-                        //ListOfPlayers.RemoveAt(index);
-                    }
+                    CurrentBetValue = bet;
+                    CBIsChanched = true;
                 }
-                else
+                else if (bet < CurrentBetValue)
                 {
-                    var bet = await WaitingForBet(ListOfPlayers[index]);
-                    if (bet > CurrentBet)
-                    {
-                        CurrentBet = bet;
-                        CBIsChanched = true;
-                    }
-                    else if (bet < CurrentBet)
-                    {
-                        ListOfPlayers[index].IsActive = false;
-                        //ListOfPlayers.RemoveAt(index);
-                    }
+                    ListOfPlayers[index].IsActive = false;
+                    //ListOfPlayers.RemoveAt(index);
                 }
             }
 
@@ -107,43 +93,63 @@ public class Bank
         }
         _respsonses = 0;
         _additionalAmount = 0;
+
+        OnBettingFinished.Invoke();
     }
 
     private int BetForBot(Player bot)
-        => CurrentBet - bot.BetValue;
-
-    public int AcceptBet(Player player)
-    {
-        var newbet = BetForBot(player);
-        Pot += newbet;
-        player.BetValue = newbet;
-        return player.BetValue;
-    }
+        => CurrentBetValue - bot.BetValue;
 
     public async Task<int> WaitingForBet(Player player)
     {
-        cts = new CancellationTokenSource();
         var timeCts = new CancellationTokenSource();
-        var currentPlayerBet = player.BetValue;
-        OnBettingStart.Invoke();
-        timeCts.CancelAfter(TimeSpan.FromSeconds(10));
+        player.StartPlayerTimer();
 
-        var flag = true;
-        while(flag)
+        if (player.IsBot)
         {
-            if(cts.Token.IsCancellationRequested)
+            timeCts.CancelAfter(TimeSpan.FromSeconds(3));
+
+            var flag = true;
+            while (flag)
             {
-                flag = false;
+                if (timeCts.Token.IsCancellationRequested)
+                {
+                    flag = false;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            if(timeCts.Token.IsCancellationRequested)
+            var newbet = BetForBot(player);
+            Pot += newbet;
+            player.BetValue = newbet;
+        }
+        else
+        {
+            BetCancellationTokenSource = new CancellationTokenSource();
+            var currentPlayerBet = player.BetValue;
+            OnBettingStart.Invoke();
+            timeCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+            var flag = true;
+            while(flag)
             {
-                player.Fold();
+                if(BetCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    flag = false;
+                }
+
+                if(timeCts.Token.IsCancellationRequested)
+                {
+                    player.Fold();
+                }
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
-            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            Pot += player.BetValue - currentPlayerBet;
         }
 
-        Pot += player.BetValue - currentPlayerBet;
+        player.StopPlayerTimer();
 
         return player.BetValue;
     }
@@ -160,5 +166,6 @@ public class Bank
     public void NullifyCurrentBank()
     {
         Pot = 0;
+        CurrentBetValue = 0;
     }
 }
